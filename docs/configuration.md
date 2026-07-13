@@ -72,7 +72,7 @@ Variables live in up to three environments depending on which code reads them:
 | `R2_BUCKET_NAME` / `R2_BUCKET` | local, app, convex | no | Bucket name; see resolution below. |
 | `R2_PUBLIC_URL` | local, convex | no | Public custom domain for the bucket (server-side helpers). |
 | `NEXT_PUBLIC_R2_PUBLIC_URL` | app | no | Same public domain, exposed to the browser. |
-| `NEXT_PUBLIC_GOOGLE_MAPS_KEY` | app | no | Google Static Maps key. A bundled fallback is used if unset; set your own to avoid sharing quota. |
+| `NEXT_PUBLIC_GOOGLE_MAPS_KEY` | app | no | Google Static Maps key. Location previews are disabled if unset; restrict it to the Static Maps API and your domains. |
 | `NEXT_PUBLIC_SITE_URL` | app | no | Absolute base URL for OG/canonical metadata. |
 
 ### Cloudflare R2

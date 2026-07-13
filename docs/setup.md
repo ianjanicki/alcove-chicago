@@ -131,9 +131,8 @@ writes `data/automation-backfill/<date>.json`, and imports it with
 NEXT_PUBLIC_GOOGLE_MAPS_KEY=...
 ```
 
-A bundled fallback key is used if this is unset, so the map works out of the
-box. Set your own key — restricted to the **Static Maps API** and your domains —
-to avoid sharing quota.
+If this is unset, location previews are disabled. Restrict the key to the
+**Static Maps API** and your deployed domains.
 
 ## 8. Make it yours
 

@@ -33,6 +33,7 @@ function Location({ apartment }: LocationProps) {
     height: 360,
     zoom,
   });
+  if (!mapUrl) return null;
   const canZoomIn = zoom < MAX_ZOOM;
   const canZoomOut = zoom > MIN_ZOOM;
 

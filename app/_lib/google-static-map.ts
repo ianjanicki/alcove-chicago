@@ -1,7 +1,3 @@
-// Bundled fallback key so the map works out of the box. Override it by setting
-// NEXT_PUBLIC_GOOGLE_MAPS_KEY to your own (restricted) key.
-const FALLBACK_KEY = "[REMOVED GOOGLE MAPS KEY]";
-
 const STYLE_PARAMS: string[] = [
   "visibility:off",
   "feature:administrative.neighborhood|visibility:simplified",
@@ -34,15 +30,16 @@ export interface StaticMapOptions {
 }
 
 /**
- * Build a styled Google Static Maps URL for an apartment location. Uses
- * NEXT_PUBLIC_GOOGLE_MAPS_KEY when set, otherwise the bundled fallback key.
+ * Build a styled Google Static Maps URL for an apartment location.
+ * Returns null when NEXT_PUBLIC_GOOGLE_MAPS_KEY is not configured.
  */
 export function googleStaticMapUrl(
   center: StaticMapCenter,
   options: StaticMapOptions = {},
-): string {
+): string | null {
   const { width = 480, height = 360, zoom = 15, scale = 2 } = options;
-  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ?? FALLBACK_KEY;
+  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+  if (!key) return null;
   const centerParam =
     typeof center === "string"
       ? center
