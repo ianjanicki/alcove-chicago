@@ -100,7 +100,7 @@ function CardContent({
 	const image = getRepresentativeImage(apartment);
 	const beds = getBedroomCount(apartment);
 	const baths = getBathroomCount(apartment);
-	const freshness = formatFreshness(apartment.createdAt);
+	const freshness = formatFreshness(apartment.listedAt);
 	const isPriority = index < 3;
 	const imageWrapperRef = useRef<HTMLDivElement>(null);
 	const imageRef = useRef<HTMLDivElement>(null);

@@ -182,14 +182,14 @@ export const list = query({
                 .collect()
             : await ctx.db.query("apartments").collect();
 
-    // Newest-found first: createdAt is a stable first-seen timestamp
-    // (re-imports preserve it), so fresh finds from the daily search rise to
-    // the top. lastVerifiedAt breaks ties within the same batch.
+    // Freshest-POSTED first: listedAt is the source's posted/updated date (from
+    // the Domu sitemap) — the honest freshness signal. Listings with a known
+    // posted date rank by it; those with an unknown posted date sink to the
+    // bottom (we don't fake freshness from our scrape date).
     apartments.sort((a, b) => {
       return (
-        (b.createdAt ?? 0) - (a.createdAt ?? 0) ||
-        b.assessment.verification.lastVerifiedAt -
-          a.assessment.verification.lastVerifiedAt
+        (b.listedAt ?? 0) - (a.listedAt ?? 0) ||
+        (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
       );
     });
 
@@ -211,6 +211,7 @@ export const listForAutomation = internalQuery({
     return rows.map((a) => ({
       _id: a._id,
       url: a.listing?.url ?? null,
+      listedAt: a.listedAt ?? null,
       hasGeo: Boolean(
         a.apartment?.geo?.latitude && a.apartment?.geo?.longitude,
       ),
@@ -330,6 +331,18 @@ export const setFavorite = mutation({
       isFavorite: args.isFavorite,
       updatedAt: Date.now(),
     });
+  },
+});
+
+export const setListedAt = mutation({
+  args: {
+    id: v.id("apartments"),
+    listedAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const apartmentDoc = await ctx.db.get(args.id);
+    if (apartmentDoc === null) return;
+    await ctx.db.patch(args.id, { listedAt: args.listedAt });
   },
 });
 

@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
+import { ApartmentDrawer } from "@/_components/drawer/apartment-drawer";
+import { useApartmentSelection } from "@/_lib/use-apartment-selection";
 import {
   getDisplayName,
   getBedroomCount,
@@ -60,28 +63,29 @@ function infoHtml(apt: any): string {
   const imgTag = img?.url
     ? `<img src="${img.url}" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:8px" />`
     : "";
+  // The link is intercepted in React to open the drawer in place (data-apt).
   return `
     <div style="width:220px;font-family:system-ui,sans-serif;color:#111">
       ${imgTag}
       <div style="font-weight:600;font-size:14px;line-height:1.2;margin-bottom:2px">${name}</div>
       <div style="font-size:12px;color:#555;margin-bottom:2px">${meta}</div>
       <div style="font-size:11px;color:#888;margin-bottom:8px">${hood}</div>
-      <a href="/?apartment=${apt._id}" style="font-size:12px;color:#2563eb;text-decoration:none;font-weight:500">View details →</a>
+      <a href="#" data-apt="${apt._id}" style="font-size:12px;color:#2563eb;text-decoration:none;font-weight:600">View details →</a>
     </div>`;
 }
 
-// Color pins by recency (matches the card freshness badges): fresh finds pop
-// green, this-week amber, older slate.
-function recencyColor(createdAt: number | undefined): string {
-  if (!createdAt) return "#64748b";
-  const days = Math.floor((Date.now() - createdAt) / 86_400_000);
-  if (days <= 2) return "#10b981"; // emerald — new
-  if (days <= 7) return "#f59e0b"; // amber — this week
+// Color pins by the listing's posted date (matches the card freshness badges).
+function recencyColor(listedAt: number | null | undefined): string {
+  if (!listedAt) return "#64748b"; // slate — unknown posted date
+  const days = Math.floor((Date.now() - listedAt) / 86_400_000);
+  if (days < 7) return "#10b981"; // emerald — posted this week
+  if (days < 30) return "#f59e0b"; // amber — this month
   return "#64748b"; // slate — older
 }
 
 export function MapView() {
   const apartments = useQuery(api.apartments.list, {});
+  const [selectedId, setSelectedId] = useApartmentSelection();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapObj = useRef<any>(null);
   const infoWin = useRef<any>(null);
@@ -97,6 +101,26 @@ export function MapView() {
     [apartments],
   );
   const total = apartments?.length ?? 0;
+  const selected = useMemo(
+    () => (apartments ?? []).find((a: any) => a._id === selectedId),
+    [apartments, selectedId],
+  );
+
+  // Intercept the info-window "View details" link → open the drawer in place.
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement)?.closest?.("[data-apt]");
+      if (!el) return;
+      e.preventDefault();
+      const id = el.getAttribute("data-apt");
+      if (id) {
+        setSelectedId(id as Id<"apartments">);
+        infoWin.current?.close();
+      }
+    };
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [setSelectedId]);
 
   useEffect(() => {
     if (!MAPS_KEY) {
@@ -114,7 +138,8 @@ export function MapView() {
           streetViewControl: false,
           fullscreenControl: false,
         });
-        infoWin.current = new google.maps.InfoWindow();
+        // headerDisabled removes the default top bar + "×" close button.
+        infoWin.current = new google.maps.InfoWindow({ headerDisabled: true });
         setReady(true);
       })
       .catch(() => setError("Failed to load Google Maps."));
@@ -141,7 +166,7 @@ export function MapView() {
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
           scale: 7,
-          fillColor: recencyColor(apt.createdAt),
+          fillColor: recencyColor(apt.listedAt),
           fillOpacity: 1,
           strokeColor: "#ffffff",
           strokeWeight: 1.5,
@@ -171,11 +196,11 @@ export function MapView() {
         </span>
       </div>
       <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-1.5 rounded-xl bg-background/90 px-3 py-2.5 text-xs shadow-card-1 backdrop-blur">
-        <div className="font-medium text-foreground">Freshness</div>
+        <div className="font-medium text-foreground">Freshness (posted)</div>
         {[
-          ["#10b981", "New (≤2 days)"],
-          ["#f59e0b", "This week"],
-          ["#64748b", "Older"],
+          ["#10b981", "This week"],
+          ["#f59e0b", "This month"],
+          ["#64748b", "Older / unknown"],
         ].map(([color, label]) => (
           <div key={label} className="flex items-center gap-2 text-muted-foreground">
             <span
@@ -193,6 +218,14 @@ export function MapView() {
       ) : (
         <div ref={mapRef} className="h-full w-full" />
       )}
+      {selected ? (
+        <ApartmentDrawer
+          key={selected._id}
+          initialApartment={selected as any}
+          onClose={() => setSelectedId(null)}
+          rightOffset={0}
+        />
+      ) : null}
     </div>
   );
 }

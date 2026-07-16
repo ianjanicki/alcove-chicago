@@ -29,23 +29,24 @@ export function formatPrice(price: number | undefined): string {
 }
 
 /**
- * How recently a listing was first added to the board. `createdAt` is a true
- * first-seen timestamp (re-imports preserve it), so this doubles as the
- * "freshness" of a find. `isNew` flags the last couple of days for emphasis.
+ * How fresh a listing is, from the SOURCE's posted/updated date (`listedAt`,
+ * from the Domu sitemap) — NOT when we scraped it. Returns an empty label when
+ * the posted date is unknown, so we never falsely mark a scrape as "new".
+ * `isNew` (posted within a week) is used for green emphasis.
  */
-export function formatFreshness(createdAt: number | undefined): {
+export function formatFreshness(listedAt: number | undefined | null): {
   label: string;
   isNew: boolean;
 } {
-  if (!createdAt) return { label: "", isNew: false };
-  const days = Math.floor((Date.now() - createdAt) / 86_400_000);
-  if (days <= 0) return { label: "New today", isNew: true };
-  if (days === 1) return { label: "1 day ago", isNew: true };
-  if (days < 7) return { label: `${days} days ago`, isNew: days <= 2 };
-  if (days < 14) return { label: "1 week ago", isNew: false };
-  if (days < 30) return { label: `${Math.floor(days / 7)} weeks ago`, isNew: false };
+  if (!listedAt) return { label: "", isNew: false };
+  const days = Math.floor((Date.now() - listedAt) / 86_400_000);
+  if (days <= 0) return { label: "New", isNew: true };
+  if (days === 1) return { label: "1d ago", isNew: true };
+  if (days < 7) return { label: `${days}d ago`, isNew: true };
+  if (days < 14) return { label: "1w ago", isNew: false };
+  if (days < 60) return { label: `${Math.floor(days / 7)}w ago`, isNew: false };
   const months = Math.floor(days / 30);
-  return { label: months <= 1 ? "1 month ago" : `${months} months ago`, isNew: false };
+  return { label: `${months}mo ago`, isNew: false };
 }
 
 export function formatStreetAddress(

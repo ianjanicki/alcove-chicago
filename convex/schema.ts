@@ -182,6 +182,11 @@ export default defineSchema({
     ),
     createdAt: v.number(),
     updatedAt: v.number(),
+    /**
+     * When the listing was actually posted/last updated at the source (from the
+     * Domu sitemap <lastmod>), NOT when we scraped it. Drives "freshness".
+     */
+    listedAt: v.optional(v.number()),
   })
     .index("by_source_key", ["sourceKey"])
     .index("by_status", ["status"])
