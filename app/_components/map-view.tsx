@@ -70,6 +70,16 @@ function infoHtml(apt: any): string {
     </div>`;
 }
 
+// Color pins by recency (matches the card freshness badges): fresh finds pop
+// green, this-week amber, older slate.
+function recencyColor(createdAt: number | undefined): string {
+  if (!createdAt) return "#64748b";
+  const days = Math.floor((Date.now() - createdAt) / 86_400_000);
+  if (days <= 2) return "#10b981"; // emerald — new
+  if (days <= 7) return "#f59e0b"; // amber — this week
+  return "#64748b"; // slate — older
+}
+
 export function MapView() {
   const apartments = useQuery(api.apartments.list, {});
   const mapRef = useRef<HTMLDivElement>(null);
@@ -128,11 +138,22 @@ export function MapView() {
         position: pos,
         map: mapObj.current,
         title: getDisplayName(apt),
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 7,
+          fillColor: recencyColor(apt.createdAt),
+          fillOpacity: 1,
+          strokeColor: "#ffffff",
+          strokeWeight: 1.5,
+        },
       });
-      marker.addListener("click", () => {
+      const openCard = () => {
         infoWin.current.setContent(infoHtml(apt));
         infoWin.current.open(mapObj.current, marker);
-      });
+      };
+      // Show the card on hover (and keep click working for touch/persistence).
+      marker.addListener("mouseover", openCard);
+      marker.addListener("click", openCard);
       markers.current.push(marker);
       bounds.extend(pos);
     });
@@ -148,6 +169,22 @@ export function MapView() {
         <span className="text-sm text-muted-foreground">
           {withGeo.length} of {total} on map
         </span>
+      </div>
+      <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-1.5 rounded-xl bg-background/90 px-3 py-2.5 text-xs shadow-card-1 backdrop-blur">
+        <div className="font-medium text-foreground">Freshness</div>
+        {[
+          ["#10b981", "New (≤2 days)"],
+          ["#f59e0b", "This week"],
+          ["#64748b", "Older"],
+        ].map(([color, label]) => (
+          <div key={label} className="flex items-center gap-2 text-muted-foreground">
+            <span
+              className="inline-block size-2.5 rounded-full"
+              style={{ backgroundColor: color }}
+            />
+            {label}
+          </div>
+        ))}
       </div>
       {error ? (
         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
