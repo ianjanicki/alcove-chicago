@@ -47,12 +47,12 @@ export const alcoveConfig = {
    * `user_location` in the in-app URL importer.
    */
   location: {
-    city: "New York",
-    region: "New York",
+    city: "Chicago",
+    region: "Illinois",
     /** ISO 3166-1 alpha-2 country code. */
     country: "US",
     /** IANA timezone for the web-search tool. */
-    timezone: "America/New_York",
+    timezone: "America/Chicago",
   },
 
   /**
@@ -60,30 +60,28 @@ export const alcoveConfig = {
    * Set to `null` to disable commute notes/scoring entirely.
    * @type {CommuteTarget | null}
    */
-  commuteTarget: {
-    name: "Your office",
-    address: {
-      streetAddress: "1 Example Plaza",
-      addressLocality: "New York",
-      addressRegion: "NY",
-      addressCountry: "US",
-    },
-  },
+  commuteTarget: null,
 
-  /** Neighborhoods you care about. */
+  /**
+   * Neighborhoods you care about. Two clusters:
+   *  - North-side lakefront, prewar-rich (greystones, vintage walk-ups, mansions).
+   *  - Loft districts near the river/parks (industrial/timber-loft conversions),
+   *    intentionally NOT the dense modern downtown core.
+   */
   neighborhoods: [
-    "Chelsea",
-    "West Village",
-    "Greenwich Village",
-    "East Village",
-    "Lower East Side",
-    "SoHo",
-    "NoHo",
-    "Tribeca",
-    "Little Italy",
-    "Gramercy",
-    "Flatiron",
-    "Stuy Town",
+    "Lincoln Park",
+    "Lakeview",
+    "Lakeview East",
+    "Gold Coast",
+    "Old Town",
+    "Bucktown",
+    "Wicker Park",
+    "Printers Row",
+    "South Loop (near Grant Park / river)",
+    "River West",
+    "West Loop / Fulton Market (near Union Park)",
+    "Pilsen (near the river / Harrison Park)",
+    "Ravenswood (river/park side)",
   ],
 
   /**
@@ -93,41 +91,42 @@ export const alcoveConfig = {
    */
   budgets: {
     "1br": {
-      label: "1BR",
-      preferred: [4000, 5500],
-      hardCap: 6000,
-      note: "high photo and floor-plan/size confidence expected for shortlist",
+      label: "1BR / loft",
+      max: 3500,
+      stretch: 5000,
+      note: "Character and space come first, not price. Target historic SMALL buildings (greystone 2-4 flats, vintage walk-ups, converted mansions, coach houses, townhouses) and industrial/timber-LOFT conversions (exposed brick + timber, high ceilings, big factory windows). Prewar only — downgrade anything postwar or modern. Strongly downgrade large managed amenity high-rises even when vintage-styled. Space and light matter more than the exact bedroom count",
     },
     "2br": {
-      label: "2BR",
-      max: 9000,
-      note: "2BR/2BA is the expected standard; downgrade 2BR/1BA unless exceptional on location, light, layout, renovation, and price",
+      label: "2BR / loft",
+      max: 4500,
+      stretch: 6000,
+      note: "Preferred where it buys real space in a historic building or true loft. Same character bar: historic small buildings and industrial-loft conversions, prewar, not high-rises",
     },
     "3br": {
-      label: "3BR",
-      max: 14000,
-      stretch: 15000,
-      note: "true 3BR/3BA is the target; downgrade 3BR/2BA unless exceptional",
+      label: "3BR / townhouse",
+      max: 6000,
+      stretch: 7500,
+      note: "For a standout historic townhouse, greystone, or large loft with genuine space and original character. Price is flexible for the right place",
       extra:
-        "Strongly favor a real living room and generous layouts over over-partitioned units",
+        "This is the Bosworth track: lots of space, historic building or townhouse, not a big apartment building",
     },
   },
 
   /** Non-negotiable features the search weighs when ranking. */
   mustHaves: [
-    "in-unit or in-building laundry",
-    "dishwasher",
-    "big windows / good daylight",
-    "relatively new or well-renovated bathroom",
-    "air conditioning and heating",
+    "historic / prewar character in a SMALL building — greystone 2-4 flat, vintage walk-up, converted mansion, coach house, or townhouse — OR an industrial/timber-loft conversion (exposed brick + timber beams, high ceilings, factory windows)",
+    "lots of space and a generous, non-chopped-up layout",
+    "genuinely NOT modern/postwar; strongly downgrade glassy high-rises and large managed amenity buildings",
+    "big windows / great daylight (bay windows, factory sash, or corner light)",
+    "character details: hardwood/parquet, original moldings/trim, exposed brick, fireplaces, high ceilings",
+    "near green space or water where possible (lakefront, river, or a park)",
   ],
 
   /**
    * Furniture you need to fit, in plain language. Set to `null` to skip.
    * @type {string | null}
    */
-  furnitureFit:
-    "queen bed; 100 inch couch with ottoman; coffee table 47.4 in W x 29 in D x 15.5 in H; sideboard 54.3 in W x 15.7 in D x 30.3 in H; accent chair. The couch/ottoman and coffee table must fit comfortably with a usable walkway; sideboard and chair are nice-to-have",
+  furnitureFit: null,
 
   /** Anthropic model for the in-app URL importer. Overridable via ANTHROPIC_MODEL. */
   anthropicModel: "claude-sonnet-4-6",
@@ -139,50 +138,45 @@ export const alcoveConfig = {
    */
   automation: {
     /** Suggested automation id/name. */
-    name: "daily-manhattan-apartment-search",
+    name: "daily-chicago-apartment-search",
     /** Move-in timing requirement, in plain language. */
     moveIn:
-      "Move-in for June 1, with June 1–June 7 the ideal window. Available now is acceptable if likely workable; later availability should be a caveat.",
+      "Flexible move-in over the next 1–2 months; available now is great. Later availability is acceptable but should be flagged as a caveat.",
     /**
      * Direct operators / property managers to inspect first (their own
-     * availability pages are the freshest, most reliable source).
+     * availability pages are the freshest, most reliable source). Weighted
+     * toward north-side landlords who manage vintage/prewar lakefront stock.
      */
     operators: [
-      "TF Cornerstone",
-      "Equity",
-      "Avalon",
-      "Related",
-      "Beam Living / StuyTown",
-      "Brodsky",
-      "Glenwood",
-      "Stonehenge",
-      "Rose Associates",
-      "Rockrose",
-      "Gotham",
-      "Fetner",
-      "Dermot",
+      "Planned Property Management",
+      "TLC Management",
+      "Reside Living",
+      "Horizon Realty Group",
+      "Cagan Management",
+      "Draper and Kramer",
+      "Marc Realty",
+      "Hunter Properties",
+      "AMLI Residential",
+      "Waterton",
       "Bozzuto",
       "Greystar",
-      "Moinian",
-      "Lalezarian",
-      "AKN",
-      "Solil",
-      "UDR",
-      "Pan Am Equities",
-      "Bettina",
-      "Icon Realty",
-      "Centurion",
-      "Jakobson",
-      "Ogden CAP",
-      "Milford",
+      "Golub / 1000M",
+      "Related Midwest",
+      "Habitat",
+      "Village Green",
+      "Lincoln Property Company",
+      "Pangea",
+      "Sudler",
     ],
     /** Aggregator/portal and broker sources to sweep after operators. */
     portals: [
-      "StreetEasy",
+      "Domu (Chicago-native)",
       "Zillow",
       "Apartments.com",
+      "HotPads",
+      "Zumper",
       "RentHop",
-      "Leasebreak",
+      "Redfin Rentals",
       "Craigslist (where reasonable)",
       "broker and brokerage inventory pages",
     ],

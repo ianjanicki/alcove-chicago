@@ -13,3 +13,4 @@ next-env.d.ts
 
 # Local apartment-search data (keep your own runs private; folder kept via .gitkeep)
 data/automation-backfill/*.json
+.env*

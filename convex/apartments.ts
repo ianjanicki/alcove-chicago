@@ -191,7 +191,9 @@ export const list = query({
     });
 
     return await Promise.all(
-      apartments.map(async (apartmentDoc) => withImages(ctx, apartmentDoc)),
+      apartments.map(async (apartmentDoc) =>
+        withImages(ctx, apartmentDoc, { thumbnailOnly: true }),
+      ),
     );
   },
 });
@@ -304,6 +306,27 @@ export const setFavorite = mutation({
   },
 });
 
+export const setGeo = mutation({
+  args: {
+    id: v.id("apartments"),
+    latitude: v.number(),
+    longitude: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const apartmentDoc = await ctx.db.get(args.id);
+    if (apartmentDoc === null) {
+      throw new Error("Apartment not found");
+    }
+    await ctx.db.patch(args.id, {
+      apartment: {
+        ...apartmentDoc.apartment,
+        geo: { latitude: args.latitude, longitude: args.longitude },
+      },
+      updatedAt: Date.now(),
+    });
+  },
+});
+
 export const setHidden = mutation({
   args: {
     id: v.id("apartments"),
@@ -377,7 +400,30 @@ export const remove = mutation({
   },
 });
 
-async function withImages(ctx: QueryCtx, apartmentDoc: Doc<"apartments">) {
+async function withImages(
+  ctx: QueryCtx,
+  apartmentDoc: Doc<"apartments">,
+  opts: { thumbnailOnly?: boolean } = {},
+) {
+  const resolveUrl = async (image: Doc<"apartmentImages">) =>
+    image.image.contentUrl ??
+    (image.storageId ? await ctx.storage.getUrl(image.storageId) : null);
+
+  // For list views we only need one thumbnail per card. Reading and
+  // resolving every image across a large board blows past Convex's 1s query
+  // limit, so read only the first image record (order 0 is the representative,
+  // inserted first) and resolve just that one URL.
+  if (opts.thumbnailOnly) {
+    const representative = await ctx.db
+      .query("apartmentImages")
+      .withIndex("by_apartment", (q) => q.eq("apartmentId", apartmentDoc._id))
+      .first();
+    const one = representative
+      ? [{ ...representative, url: await resolveUrl(representative) }]
+      : [];
+    return { ...apartmentDoc, images: one };
+  }
+
   const images = await ctx.db
     .query("apartmentImages")
     .withIndex("by_apartment", (q) => q.eq("apartmentId", apartmentDoc._id))
@@ -387,12 +433,7 @@ async function withImages(ctx: QueryCtx, apartmentDoc: Doc<"apartments">) {
   return {
     ...apartmentDoc,
     images: await Promise.all(
-      images.map(async (image) => ({
-        ...image,
-        url:
-          image.image.contentUrl ??
-          (image.storageId ? await ctx.storage.getUrl(image.storageId) : null),
-      })),
+      images.map(async (image) => ({ ...image, url: await resolveUrl(image) })),
     ),
   };
 }

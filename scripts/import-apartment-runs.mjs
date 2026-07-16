@@ -14,7 +14,7 @@ import {
 } from "./r2.mjs";
 
 const DEFAULT_DATA_FILE = "data/automation-backfill/runs.json";
-const DEFAULT_IMAGE_LIMIT = 4;
+const DEFAULT_IMAGE_LIMIT = 24;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MIN_IMAGE_WIDTH = 360;
 const MIN_IMAGE_HEIGHT = 220;
@@ -1018,10 +1018,10 @@ function isCoreNeighborhood(neighborhood) {
 function buildAddress(listing) {
   return prune({
     streetAddress: listing.streetAddress,
-    addressLocality: listing.addressLocality ?? "New York",
-    addressRegion: listing.addressRegion ?? "NY",
+    addressLocality: listing.addressLocality ?? alcoveConfig.location.city,
+    addressRegion: listing.addressRegion ?? alcoveConfig.location.region,
     postalCode: listing.postalCode,
-    addressCountry: listing.addressCountry ?? "US",
+    addressCountry: listing.addressCountry ?? alcoveConfig.location.country,
   });
 }
 

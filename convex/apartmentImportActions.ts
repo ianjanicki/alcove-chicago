@@ -189,7 +189,7 @@ type AgentListing = z.infer<typeof AgentListingSchema>;
 type AgentExtraction = z.infer<typeof AgentExtractionSchema>;
 
 const DEFAULT_MODEL = alcoveConfig.anthropicModel;
-const DEFAULT_IMAGE_LIMIT = 4;
+const DEFAULT_IMAGE_LIMIT = 24;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MIN_IMAGE_WIDTH = 360;
 const MIN_IMAGE_HEIGHT = 220;
@@ -730,8 +730,14 @@ async function attachImages(
     warnings.push("No fetchable image candidates were found.");
   }
 
-  const r2Config = getR2Config();
-  const r2Client = createR2Client(r2Config);
+  const r2Available = isR2Configured();
+  const r2Config = r2Available ? getR2Config() : null;
+  const r2Client = r2Config ? createR2Client(r2Config) : null;
+  if (!r2Available && candidates.length > 0) {
+    warnings.push(
+      "R2 not configured; storing images in Convex file storage instead.",
+    );
+  }
   let attached = 0;
   let failures = 0;
 
@@ -747,38 +753,55 @@ async function attachImages(
       }
 
       const order = existingImages.length + attached;
-      const key = r2ObjectKey({
-        apartmentId,
-        sourceUrl: candidate.url,
-        bytes: downloaded.bytes,
-        contentType: downloaded.contentType,
-        order,
-      });
-      const uploaded = await putR2Object(r2Client, {
-        bucket: r2Config.bucket,
-        key,
-        bytes: downloaded.bytes,
-        contentType: downloaded.contentType,
-        sourceUrl: candidate.url,
-      });
+      const imageMeta = {
+        name: `${listing.name ?? "Apartment"} image ${order + 1}`,
+        caption: candidate.caption,
+        encodingFormat: downloaded.contentType,
+        representativeOfPage: order === 0,
+      };
+      const kind = candidate.kind ?? imageKindFromUrl(candidate.url);
 
-      await ctx.runMutation(api.images.attachR2, {
-        apartmentId,
-        bucket: r2Config.bucket,
-        key,
-        contentUrl: r2ContentUrl(key, r2Config),
-        etag: uploaded.etag,
-        contentLength: downloaded.bytes.byteLength,
-        kind: candidate.kind ?? imageKindFromUrl(candidate.url),
-        sourceUrl: candidate.url,
-        order,
-        image: {
-          name: `${listing.name ?? "Apartment"} image ${order + 1}`,
-          caption: candidate.caption,
-          encodingFormat: downloaded.contentType,
-          representativeOfPage: order === 0,
-        },
-      });
+      if (r2Config && r2Client) {
+        const key = r2ObjectKey({
+          apartmentId,
+          sourceUrl: candidate.url,
+          bytes: downloaded.bytes,
+          contentType: downloaded.contentType,
+          order,
+        });
+        const uploaded = await putR2Object(r2Client, {
+          bucket: r2Config.bucket,
+          key,
+          bytes: downloaded.bytes,
+          contentType: downloaded.contentType,
+          sourceUrl: candidate.url,
+        });
+
+        await ctx.runMutation(api.images.attachR2, {
+          apartmentId,
+          bucket: r2Config.bucket,
+          key,
+          contentUrl: r2ContentUrl(key, r2Config),
+          etag: uploaded.etag,
+          contentLength: downloaded.bytes.byteLength,
+          kind,
+          sourceUrl: candidate.url,
+          order,
+          image: imageMeta,
+        });
+      } else {
+        const storageId = await ctx.storage.store(
+          new Blob([downloaded.bytes], { type: downloaded.contentType }),
+        );
+        await ctx.runMutation(api.images.attach, {
+          apartmentId,
+          storageId,
+          kind,
+          sourceUrl: candidate.url,
+          order,
+          image: imageMeta,
+        });
+      }
 
       attached += 1;
     } catch (error) {
@@ -964,8 +987,8 @@ function normalizeAgentListing(
     name,
     addressLink: normalizedString(raw.addressLink) ?? url,
     streetAddress,
-    addressLocality: "New York",
-    addressRegion: "NY",
+    addressLocality: alcoveConfig.location.city,
+    addressRegion: alcoveConfig.location.region,
     unit,
     neighborhood: normalizedString(raw.neighborhood),
     status: "monitor",
@@ -1703,6 +1726,14 @@ function termsForListing(listing: CompactListing) {
   );
 }
 
+function isR2Configured() {
+  return Boolean(
+    process.env.R2_S3_API_URL &&
+      process.env.R2_S3_ACCESS_KEY_ID &&
+      process.env.R2_S3_SECRET_ACCESS_KEY,
+  );
+}
+
 function getR2Config() {
   const endpointInput = process.env.R2_S3_API_URL;
   const accessKeyId = process.env.R2_S3_ACCESS_KEY_ID;
@@ -2054,10 +2085,10 @@ function trackFromBedrooms(bedrooms?: number): Track {
 function buildAddress(listing: CompactListing) {
   return prune({
     streetAddress: listing.streetAddress,
-    addressLocality: listing.addressLocality ?? "New York",
-    addressRegion: listing.addressRegion ?? "NY",
+    addressLocality: listing.addressLocality ?? alcoveConfig.location.city,
+    addressRegion: listing.addressRegion ?? alcoveConfig.location.region,
     postalCode: listing.postalCode,
-    addressCountry: "US",
+    addressCountry: alcoveConfig.location.country,
   });
 }
 

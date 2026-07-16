@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { IconPlusFill18 } from "@/_components/ui/icons";
 import { Button } from "@/_components/ui/button";
 import { Icon } from "@/_components/ui/icon";
@@ -15,14 +16,19 @@ function Header({ onOpenAdd }: HeaderProps) {
       <Typography variant="h1" className="text-foreground">
         Alcove
       </Typography>
-      <Button
-        aria-label="Add apartment"
-        onClick={onOpenAdd}
-        data-add-apartment-trigger
-      >
-        <Icon glyph={IconPlusFill18} size={14} />
-        Add
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button asChild variant="quiet" aria-label="View map">
+          <Link href="/map">Map</Link>
+        </Button>
+        <Button
+          aria-label="Add apartment"
+          onClick={onOpenAdd}
+          data-add-apartment-trigger
+        >
+          <Icon glyph={IconPlusFill18} size={14} />
+          Add
+        </Button>
+      </div>
     </header>
   );
 }
