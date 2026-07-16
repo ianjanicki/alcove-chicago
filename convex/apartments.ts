@@ -201,6 +201,30 @@ export const list = query({
   },
 });
 
+// Lightweight listing for the daily automation: URLs + geo + address only,
+// no image resolution — safe to call from an action without hitting the 1s
+// query limit that the image-resolving `list` query would.
+export const listForAutomation = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("apartments").collect();
+    return rows.map((a) => ({
+      _id: a._id,
+      url: a.listing?.url ?? null,
+      hasGeo: Boolean(
+        a.apartment?.geo?.latitude && a.apartment?.geo?.longitude,
+      ),
+      address: [
+        a.apartment?.address?.streetAddress,
+        a.apartment?.address?.addressLocality,
+        a.apartment?.address?.addressRegion,
+      ]
+        .filter(Boolean)
+        .join(", "),
+    }));
+  },
+});
+
 export const listManualAddRepairCandidates = internalQuery({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
