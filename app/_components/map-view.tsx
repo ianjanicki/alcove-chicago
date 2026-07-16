@@ -90,6 +90,7 @@ export function MapView() {
   const mapObj = useRef<any>(null);
   const infoWin = useRef<any>(null);
   const markers = useRef<any[]>([]);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -172,12 +173,31 @@ export function MapView() {
           strokeWeight: 1.5,
         },
       });
+      const cancelClose = () => {
+        if (closeTimer.current) {
+          clearTimeout(closeTimer.current);
+          closeTimer.current = null;
+        }
+      };
+      const scheduleClose = () => {
+        cancelClose();
+        closeTimer.current = setTimeout(() => infoWin.current?.close(), 220);
+      };
       const openCard = () => {
-        infoWin.current.setContent(infoHtml(apt));
+        cancelClose();
+        // Build the content as a node so we can keep the card open while the
+        // pointer is over it (lets you reach "View details").
+        const node = document.createElement("div");
+        node.innerHTML = infoHtml(apt);
+        node.addEventListener("mouseenter", cancelClose);
+        node.addEventListener("mouseleave", scheduleClose);
+        infoWin.current.setContent(node);
         infoWin.current.open(mapObj.current, marker);
       };
-      // Show the card on hover (and keep click working for touch/persistence).
+      // Hover on shows the card; hovering off dismisses it (with a short grace
+      // period so you can move onto the card). Click still pins it open.
       marker.addListener("mouseover", openCard);
+      marker.addListener("mouseout", scheduleClose);
       marker.addListener("click", openCard);
       markers.current.push(marker);
       bounds.extend(pos);
