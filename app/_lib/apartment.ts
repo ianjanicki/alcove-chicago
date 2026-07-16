@@ -28,6 +28,26 @@ export function formatPrice(price: number | undefined): string {
   return USD.format(price);
 }
 
+/**
+ * How recently a listing was first added to the board. `createdAt` is a true
+ * first-seen timestamp (re-imports preserve it), so this doubles as the
+ * "freshness" of a find. `isNew` flags the last couple of days for emphasis.
+ */
+export function formatFreshness(createdAt: number | undefined): {
+  label: string;
+  isNew: boolean;
+} {
+  if (!createdAt) return { label: "", isNew: false };
+  const days = Math.floor((Date.now() - createdAt) / 86_400_000);
+  if (days <= 0) return { label: "New today", isNew: true };
+  if (days === 1) return { label: "1 day ago", isNew: true };
+  if (days < 7) return { label: `${days} days ago`, isNew: days <= 2 };
+  if (days < 14) return { label: "1 week ago", isNew: false };
+  if (days < 30) return { label: `${Math.floor(days / 7)} weeks ago`, isNew: false };
+  const months = Math.floor(days / 30);
+  return { label: months <= 1 ? "1 month ago" : `${months} months ago`, isNew: false };
+}
+
 export function formatStreetAddress(
   address: Apartment["apartment"]["address"],
 ): string | undefined {

@@ -8,6 +8,7 @@ import {
 	BedroomIcon,
 	type Apartment,
 	formatPrice,
+	formatFreshness,
 	getBathroomCount,
 	getBedroomCount,
 	getDisplayName,
@@ -99,6 +100,7 @@ function CardContent({
 	const image = getRepresentativeImage(apartment);
 	const beds = getBedroomCount(apartment);
 	const baths = getBathroomCount(apartment);
+	const freshness = formatFreshness(apartment.createdAt);
 	const isPriority = index < 3;
 	const imageWrapperRef = useRef<HTMLDivElement>(null);
 	const imageRef = useRef<HTMLDivElement>(null);
@@ -120,6 +122,18 @@ function CardContent({
 							fetchPriority={isPriority ? "high" : "auto"}
 							className="absolute inset-0 size-full object-cover"
 						/>
+					) : null}
+					{freshness.label ? (
+						<div
+							className={cn(
+								"absolute left-2 top-2 rounded-full px-2 py-[3px] text-[11px] font-semibold leading-none shadow-sm backdrop-blur",
+								freshness.isNew
+									? "bg-emerald-500/95 text-white"
+									: "bg-black/55 text-white",
+							)}
+						>
+							{freshness.label}
+						</div>
 					) : null}
 				</div>
 			</div>

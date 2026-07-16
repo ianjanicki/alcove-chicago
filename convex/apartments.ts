@@ -182,12 +182,15 @@ export const list = query({
                 .collect()
             : await ctx.db.query("apartments").collect();
 
+    // Newest-found first: createdAt is a stable first-seen timestamp
+    // (re-imports preserve it), so fresh finds from the daily search rise to
+    // the top. lastVerifiedAt breaks ties within the same batch.
     apartments.sort((a, b) => {
-      const rankA = a.rank ?? Number.MAX_SAFE_INTEGER;
-      const rankB = b.rank ?? Number.MAX_SAFE_INTEGER;
-      const verifiedA = a.assessment.verification.lastVerifiedAt;
-      const verifiedB = b.assessment.verification.lastVerifiedAt;
-      return rankA - rankB || verifiedB - verifiedA;
+      return (
+        (b.createdAt ?? 0) - (a.createdAt ?? 0) ||
+        b.assessment.verification.lastVerifiedAt -
+          a.assessment.verification.lastVerifiedAt
+      );
     });
 
     return await Promise.all(
